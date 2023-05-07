@@ -1,5 +1,6 @@
+# Greedy Best-First Search
+
 from queue import PriorityQueue
-import time
 
 class Node:
     def __init__(self, name:str):
