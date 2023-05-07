@@ -1,3 +1,6 @@
+from queue import PriorityQueue
+import time
+
 class Node:
     def __init__(self, name:str):
         self.name = name
@@ -5,6 +8,7 @@ class Node:
     
     def connect(self, node, cost:int):
         self.next.append((node, cost))
+        node.next.append((self, cost))
     
     def __str__(self):
         return self.name
@@ -46,3 +50,20 @@ e.show()
 f.show()
 g.show()
 
+def bestFirstSearch(start:Node, end:Node):
+    visited = []
+    pq = PriorityQueue()
+    pq.put((0, start))
+
+    while pq.not_empty:
+        x = pq.get()[1]
+        visited.append(x)
+
+        if x is end:
+            return visited
+        
+        for i in x.next:
+            if i[0] not in visited:
+                pq.put((i[1], i[0]))
+
+print(bestFirstSearch(start=a, end=d))
