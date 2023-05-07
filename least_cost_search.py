@@ -1,48 +1,72 @@
 # Greedy Best-First Search
 
 from queue import PriorityQueue
+from typing import Union
 
+# graph node definition
 class Node:
-    def __init__(self, name:str):
+    def __init__(self, name:str, pos:tuple) -> None:
         self.name = name
-        self.next = []
-    
-    def connect(self, node, cost:int):
-        self.next.append((node, cost))
-        node.next.append((self, cost))
-    
-    def __str__(self):
+        self.pos = pos
+        self.neighbours = []
+
+    def connect(self, node) -> None:
+        if node not in self.neighbours:
+            self.neighbours.append(node)
+
+        if self not in node.neighbours:
+            node.neighbours.append(self)
+
+    def __str__(self) -> str:
+        return self.name + repr(self.pos)
+
+    def __repr__(self) -> str:
         return self.name
-    
-    def __repr__(self):
-        return self.name
-    
-    def show(self):
-        print(f'Node: {self.name}, Next: {self.next}')
 
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, Node):
+            return False
+        if self.pos != __value.pos:
+            return False
 
-a = Node('A')
-b = Node('B')
-c = Node('C')
-d = Node('D')
-e = Node('E')
-f = Node('F')
-g = Node('G')
+        return True
 
-a.connect(b, 3)
+    def show(self) -> None:
+        print(f'Node: {self.name}, Pos: {self.pos}, Neighbours: {self.neighbours}')
 
-b.connect(c, 1)
-b.connect(d, 4)
+# heuristic function: euclidean distance
+def h(a:Node, b:Node) -> float:
 
-d.connect(e, 1)
+    ax, ay = a.pos
+    bx, by = b.pos
 
-c.connect(e, 2)
-c.connect(f, 1)
+    return ((ax - bx)**2 + (ay-by)**2)**0.5
 
-f.connect(g, 1)
+# defining graph nodes
+a = Node('A', (0, 0))
+b = Node('B', (5, 0))
+c = Node('C', (8, 0))
+d = Node('D', (5, 1))
+e = Node('E', (8, 1))
+f = Node('F', (4, 1))
+g = Node('G', (4, 3))
 
-g.connect(e, 2)
+# defining graph edges
+a.connect(b)
 
+b.connect(c)
+b.connect(d)
+
+d.connect(e)
+d.connect(f)
+
+c.connect(e)
+
+f.connect(g)
+
+g.connect(e)
+
+# displaying graph node details
 a.show()
 b.show()
 c.show()
@@ -51,7 +75,7 @@ e.show()
 f.show()
 g.show()
 
-def bestFirstSearch(start:Node, end:Node):
+def bestFirstSearch(start:Node, end:Node) -> Union[list, None]:
     visited = []
     pq = PriorityQueue()
     pq.put((0, start))
@@ -60,11 +84,13 @@ def bestFirstSearch(start:Node, end:Node):
         x = pq.get()[1]
         visited.append(x)
 
-        if x is end:
+        if x == end:
             return visited
-        
-        for i in x.next:
-            if i[0] not in visited:
-                pq.put((i[1], i[0]))
 
-print(bestFirstSearch(start=a, end=d))
+        for i in x.neighbours:
+            if i not in visited:
+                pq.put((h(i, end), i))
+
+    return None
+
+print(bestFirstSearch(start=a, end=e))
