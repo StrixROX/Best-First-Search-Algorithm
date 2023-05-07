@@ -78,19 +78,23 @@ g.show()
 def bestFirstSearch(start:Node, end:Node) -> Union[list, None]:
     visited = []
     pq = PriorityQueue()
-    pq.put((0, start))
+    pq.put((0, start)) # put the start node in pq to start search
 
     while pq.not_empty:
-        x = pq.get()[1]
-        visited.append(x)
+        x = pq.get()[1] # getting the node with least priority in pq
+        visited.append(x) # add this node to the visited list
 
+        # if this node the goal node then return the path taken
         if x == end:
             return visited
 
+        # iterate through all the unvisited nodes connected to this node
+        # and put it into pq
         for i in x.neighbours:
             if i not in visited:
                 pq.put((h(i, end), i))
 
+    # if the goal node is not connected to the start node, return None
     return None
 
 print(bestFirstSearch(start=a, end=e))
