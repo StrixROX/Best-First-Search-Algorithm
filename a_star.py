@@ -78,15 +78,18 @@ g.show()
 def a_star(start:Node, end:Node) -> Union[list, None]:
     visited = []
     pq = PriorityQueue()
-    pq.put((0, start))
+    pq.put((0, start)) # put the start node in pq to start search
 
     while pq.not_empty:
-        cost, x = pq.get()
-        visited.append(x)
+        cost, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
+        visited.append(x) # add this node to the visited list
 
+        # if this node the goal node then return the path taken
         if x == end:
             return visited
 
+        # iterate through all the unvisited nodes connected to this node
+        # and put it into pq using f(i) = g(i) + h(i)
         for i in x.neighbours:
             if i not in visited:
                 pq.put((cost + h(i, end), i))
