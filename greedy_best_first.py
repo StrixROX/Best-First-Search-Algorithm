@@ -89,7 +89,7 @@ def bestFirstSearch(start:Node, end:Node) -> Union[list, None]:
             return visited
 
         # iterate through all the unvisited nodes connected to this node
-        # and put it into pq
+        # and put it into pq using f(i) = h(i)
         for i in x.neighbours:
             if i not in visited:
                 pq.put((h(i, end), i))
