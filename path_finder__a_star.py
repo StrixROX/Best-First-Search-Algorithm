@@ -134,6 +134,7 @@ def showGraph(graph:list):
         else:
             cmap.append('blue')
 
+    plt.figure('Graph Visualisation')
     nx.draw_networkx(G,node_color=cmap)
     plt.show()
 
