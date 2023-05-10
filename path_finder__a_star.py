@@ -162,26 +162,25 @@ Graph = generateGraph(Map)
 def a_star(start:Node, end:Node) -> Union[list, None]:
     visited = []
     pq = PriorityQueue()
-    pq.put((0, 1, start)) # put the start node in pq to start search
+    pq.put((0, start)) # put the start node in pq to start search
 
     while pq.not_empty:
-        cost, _, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
+        cost, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
         visited.append(x) # add this node to the visited list
 
-        print(visited, x)
+        print(x)
 
         # if this node the goal node then return the path taken
         if x == end:
             return visited
 
-        # iterate through all the unvisited nodes connected to this node
-        # and put it into pq using f(i) = g(i) + h(i)
-        for i in x.neighbours:
-            if i not in visited:
-                print(i, visited)
-                pq.put((cost + h(i, end), i.name, i))
+        # pick the node with lowest f(i) = g(i) + h(i) value
+        # to traverse next and put it into pq
+        y = list(x.neighbours)
+        y.sort(key=lambda i: cost+h(i, end))
+        pq.put((cost + h(y[0], end), y[0]))
 
     return None
 
-# print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
+print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
 showGraph(Graph)
