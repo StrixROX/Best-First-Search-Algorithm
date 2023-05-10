@@ -63,13 +63,20 @@ def h(a:Node, b:Node) -> float:
 #     [0,0,0,0,0,0,0,0,0,0]
 # ]
 
+# Map = [
+#     [0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 0, 0, 0],
+# ]
+
 Map = [
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
 ]
 
 def generateGraph(Map:list) -> list:
@@ -80,7 +87,7 @@ def generateGraph(Map:list) -> list:
 
     for i in range(h):
         for j in range(w):
-            temp = Node(i*w + j+1, (i, j), Map[i][j] == 1)
+            temp = Node(i*w + j+1, (j, i), Map[i][j] == 1)
             graphNodes[i][j] = temp
     
     for i in range(h):
@@ -93,11 +100,12 @@ def generateGraph(Map:list) -> list:
     return graphNodes
 
 class GraphVisualization:
-    def __init__(self):
+    def __init__(self, graph):
         # visual is a list which stores all 
         # the set of edges that constitutes a
         # graph
         self.visual = []
+        self.graph = graph
 
     # addEdge function inputs the vertices of an
     # edge and appends it to the visual list
@@ -110,9 +118,25 @@ class GraphVisualization:
     # creates a graph with a given list
     # nx.draw_networkx(G) - plots the graph
     # plt.show() - displays the graph
-    def visualize(self, cmap=None):
+    def visualize(self):
         G = nx.Graph()
         G.add_edges_from(self.visual)
+
+        cmap = []
+        for node in G:
+            if type(node) == tuple:
+                j, i = node
+            else:
+                w = len(self.graph[0])
+
+                j = node % w - 1
+                i = (node - 1) // w
+
+            if self.graph[i][j].isBlocked:
+                cmap.append('red')
+            else:
+                cmap.append('blue')
+
         nx.draw_networkx(G,node_color=cmap)
         plt.show()
 
@@ -120,17 +144,10 @@ def showGraph(graph:list):
     w = len(graph[0])
     h = len(graph)
 
-    G = GraphVisualization()
-
-    cmap = []
+    G = GraphVisualization(graph)
 
     for i in range(h):
         for j in range(w):
-            if graph[i][j].isBlocked:
-                cmap.append('red')
-            else:
-                cmap.append('blue')
-
             if j < w - 1:
                 G.addEdge(graph[i][j].name, graph[i][j+1].name)
                 # graph[i][j].connect(graph[i][j+1])
@@ -138,19 +155,20 @@ def showGraph(graph:list):
                 G.addEdge(graph[i][j].name, graph[i+1][j].name)
                 # graph[i][j].connect(graph[i+1][j])
 
-    G.visualize(cmap=cmap)
+    G.visualize()
 
 Graph = generateGraph(Map)
-showGraph(Graph)
 
 def a_star(start:Node, end:Node) -> Union[list, None]:
     visited = []
     pq = PriorityQueue()
-    pq.put((0, start)) # put the start node in pq to start search
+    pq.put((0, 1, start)) # put the start node in pq to start search
 
     while pq.not_empty:
-        cost, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
+        cost, _, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
         visited.append(x) # add this node to the visited list
+
+        print(visited, x)
 
         # if this node the goal node then return the path taken
         if x == end:
@@ -160,8 +178,10 @@ def a_star(start:Node, end:Node) -> Union[list, None]:
         # and put it into pq using f(i) = g(i) + h(i)
         for i in x.neighbours:
             if i not in visited:
-                pq.put((cost + h(i, end), i))
+                print(i, visited)
+                pq.put((cost + h(i, end), i.name, i))
 
     return None
 
-# print(a_star(start=Map[0][0], end=Map[5][5]))
+# print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
+showGraph(Graph)
