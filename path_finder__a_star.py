@@ -99,65 +99,43 @@ def generateGraph(Map:list) -> list:
 
     return graphNodes
 
-class GraphVisualization:
-    def __init__(self, graph):
-        # visual is a list which stores all 
-        # the set of edges that constitutes a
-        # graph
-        self.visual = []
-        self.graph = graph
-
-    # addEdge function inputs the vertices of an
-    # edge and appends it to the visual list
-    def addEdge(self, a, b):
-        temp = [a, b]
-        self.visual.append(temp)
-
-    # In visualize function G is an object of
-    # class Graph given by networkx G.add_edges_from(visual)
-    # creates a graph with a given list
-    # nx.draw_networkx(G) - plots the graph
-    # plt.show() - displays the graph
-    def visualize(self):
-        G = nx.Graph()
-        G.add_edges_from(self.visual)
-
-        cmap = []
-        for node in G:
-            if type(node) == tuple:
-                j, i = node
-            else:
-                w = len(self.graph[0])
-
-                j = node % w - 1
-                i = (node - 1) // w
-
-            if self.graph[i][j].isBlocked:
-                cmap.append('red')
-            else:
-                cmap.append('blue')
-
-        nx.draw_networkx(G,node_color=cmap)
-        plt.show()
-
 def showGraph(graph:list):
     w = len(graph[0])
     h = len(graph)
 
-    G = GraphVisualization(graph)
+    visibleNodes = []
 
     for i in range(h):
         for j in range(w):
             if j < w - 1:
-                G.addEdge(graph[i][j].name, graph[i][j+1].name)
+                visibleNodes.append([graph[i][j].name, graph[i][j+1].name])
+                # G.addEdge(graph[i][j].name, graph[i][j+1].name)
                 # graph[i][j].connect(graph[i][j+1])
             if i < h - 1:
-                G.addEdge(graph[i][j].name, graph[i+1][j].name)
+                visibleNodes.append([graph[i][j].name, graph[i+1][j].name])
+                # G.addEdge(graph[i][j].name, graph[i+1][j].name)
                 # graph[i][j].connect(graph[i+1][j])
 
-    G.visualize()
+    G = nx.Graph()
+    G.add_edges_from(visibleNodes)
 
-Graph = generateGraph(Map)
+    cmap = []
+    for node in G:
+        if type(node) == tuple:
+            j, i = node
+        else:
+            w = len(graph[0])
+
+            j = node % w - 1
+            i = (node - 1) // w
+
+        if graph[i][j].isBlocked:
+            cmap.append('red')
+        else:
+            cmap.append('blue')
+
+    nx.draw_networkx(G,node_color=cmap)
+    plt.show()
 
 def a_star(start:Node, end:Node) -> Union[list, None]:
     visited = []
@@ -200,6 +178,8 @@ def showHeuristicMap(graph:list):
     plt.imshow(hViz, cmap='binary', interpolation='nearest')
     plt.show()
 
+Graph = generateGraph(Map)
+
 # print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
-# showGraph(Graph)
-showHeuristicMap(Graph)
+showGraph(Graph)
+# showHeuristicMap(Graph)
