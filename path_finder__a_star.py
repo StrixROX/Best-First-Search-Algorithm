@@ -39,7 +39,7 @@ class Node:
     def show(self) -> None:
         print(f'Node: {self.name}, Pos: {self.pos}, Neighbours: {self.neighbours}')
 
-# heuristic function: euclidean distance
+# heuristic function: euclidean distance with obstacle detection
 def h(a:Node, b:Node) -> float:
 
     ax, ay = a.pos
@@ -182,5 +182,24 @@ def a_star(start:Node, end:Node) -> Union[list, None]:
 
     return None
 
-print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
-showGraph(Graph)
+def showHeuristicMap(graph:list):
+    hViz = []
+    goal = graph[-1][-1]
+
+    for i in graph:
+        temp = []
+        for j in i:
+            temp.append(h(j, goal))
+        hViz.append(temp)
+        # print(temp)
+
+    plt.figure('Heuristic Function Heatmap')
+    plt.title('Heuristic Function, h(i)')
+    plt.xlabel('X-Axis')
+    plt.ylabel('Y-Axis')
+    plt.imshow(hViz, cmap='binary', interpolation='nearest')
+    plt.show()
+
+# print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
+# showGraph(Graph)
+showHeuristicMap(Graph)
