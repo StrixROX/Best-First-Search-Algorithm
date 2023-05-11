@@ -1,4 +1,4 @@
-# A* Search
+# Uniform Cost(1) A* Search
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -91,7 +91,7 @@ def generateGraph(Map:list) -> list:
 
     return graphNodes
 
-def showGraph(graph:list):
+def showGraph(graph:list) -> None:
     w = len(graph[0])
     h = len(graph)
 
@@ -130,6 +130,47 @@ def showGraph(graph:list):
     nx.draw_networkx(G,node_color=cmap)
     # plt.show()
 
+def showPath(graph:list, path:list) -> None:
+    w = len(graph[0])
+    h = len(graph)
+
+    visibleNodes = []
+
+    for i in range(h):
+        for j in range(w):
+            if j < w - 1:
+                visibleNodes.append([graph[i][j].name, graph[i][j+1].name])
+                # G.addEdge(graph[i][j].name, graph[i][j+1].name)
+                # graph[i][j].connect(graph[i][j+1])
+            if i < h - 1:
+                visibleNodes.append([graph[i][j].name, graph[i+1][j].name])
+                # G.addEdge(graph[i][j].name, graph[i+1][j].name)
+                # graph[i][j].connect(graph[i+1][j])
+
+    G = nx.Graph()
+    G.add_edges_from(visibleNodes)
+
+    cmap = []
+    for node in G:
+        if type(node) == tuple:
+            j, i = node
+        else:
+            w = len(graph[0])
+
+            j = node % w - 1
+            i = (node - 1) // w
+
+        if graph[i][j].isBlocked:
+            cmap.append('red')
+        elif graph[i][j] in path:
+            cmap.append('green')
+        else:
+            cmap.append('blue')
+
+    plt.figure('Path Visualisation')
+    nx.draw_networkx(G,node_color=cmap)
+    # plt.show()
+
 # heuristic function: euclidean distance with obstacle detection
 def h(a:Node, b:Node) -> float:
     # a to b
@@ -150,17 +191,17 @@ def a_star(start:Node, end:Node, visited:list = [], cost:float = 0) -> Union[lis
 
     temp = list(start.neighbours)
     temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
-    temp.sort(key=lambda x: h(x, end))
+    temp.sort(key=lambda x: cost + h(x, end))
 
     for i in temp:
         if i not in visited:
-            res = a_star(i, end, visited + [start], cost + h(i, end))
+            res = a_star(i, end, visited + [start], cost + 1)
             if res is not None:
                 return res
 
     return None
 
-def showHeuristicMap(graph:list):
+def showHeuristicMap(graph:list) -> None:
     hViz = []
     goal = graph[-1][-1]
 
@@ -176,15 +217,24 @@ def showHeuristicMap(graph:list):
     plt.xlabel('X-Axis')
     plt.ylabel('Y-Axis')
     plt.imshow(hViz, cmap='Wistia', interpolation='nearest')
-    # plt.show()
+
+    _w = len(graph[0])
+    _h = len(graph)
+
+    for i in range(_w):
+        for j in range(_h):
+            plt.text(j, i, graph[i][j].name,
+                ha="center", va="center", color="black")
 
 Graph = generateGraph(Map)
 start = Graph[0][0]
 end = Graph[-1][-1]
 
-path = a_star(start, end)
-print(path, 'Cost:', len(path or []))
+Path = a_star(start, end)
+print(Path, 'Cost:', len(Path or []))
+
 showGraph(Graph)
 showHeuristicMap(Graph)
+showPath(Graph, Path)
 
 plt.show()
