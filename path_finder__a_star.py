@@ -196,20 +196,28 @@ def showGraphPath(graph:list, path:list) -> None:
 # recursive A* search algorithm (uniform cost)
 def a_star(start:Node, end:Node, visited:list = []) -> Union[list, None]:
     if start == end:
+        # reached goal
         return visited + [end]
     if h(start,end) == float('inf'):
+        # reached obstacle
         return None
 
-    temp = list(start.neighbours)
+    # only consider the neighbours that are not blocked
     temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
+    # sort them by heuristic function only since it is uniform cost
+    # otherwise there would be a separate cost function
+    # added to the heuristic function value
     temp.sort(key=lambda x: h(x, end))
 
     for i in temp:
         if i not in visited:
             res = a_star(i, end, visited + [start])
             if res is not None:
+                # if we found the goal float it up the recursion chain
+                # and return the path to main program
                 return res
 
+    # if no path could be found to goal
     return None
 
 def showHeuristicMap(graph:list) -> None:
