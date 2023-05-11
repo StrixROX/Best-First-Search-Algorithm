@@ -12,12 +12,12 @@ from typing import Union
 #     [0,0,0,0,0,0,0,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,1,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0],
 #     [0,0,0,0,1,1,1,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,1,0,0,1,0,0,0,0],
 #     [0,0,0,0,0,0,0,0,0,0]
 # ]
 
@@ -188,6 +188,8 @@ def h(a:Node, b:Node) -> float:
 def a_star(start:Node, end:Node, visited:list = [], cost:float = 0) -> Union[list, None]:
     if start == end:
         return visited + [end]
+    if h(start,end) == float('inf'):
+        return None
 
     temp = list(start.neighbours)
     temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
@@ -235,6 +237,7 @@ print(Path, 'Cost:', len(Path or []))
 
 showGraph(Graph)
 showHeuristicMap(Graph)
-showPath(Graph, Path)
+if Path is not None:
+    showPath(Graph, Path)
 
 plt.show()
