@@ -4,6 +4,10 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from typing import Union
 
+### Change 'Map' to any rectangular coordinate map
+### Change 'start' and 'end' to any nodes in the constructed 'Graph'
+### Run to see Uniform Cost(1) A* Search in action
+
 # n = 6
 # Map = [[0 for i in range(n)] for j in range(n)]
 
