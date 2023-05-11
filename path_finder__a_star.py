@@ -37,6 +37,13 @@ Map = [
     [0, 1, 1, 0]
 ]
 
+MAP = []
+for i in Map:
+    temp = []
+    for j in i:
+        temp.append(j)
+    MAP.append(temp)
+
 # graph node definition
 class Node:
     def __init__(self, name:int, pos:tuple, isBlocked:bool = False) -> None:
@@ -228,6 +235,35 @@ def showHeuristicMap(graph:list) -> None:
             plt.text(j, i, graph[i][j].name,
                 ha="center", va="center", color="black")
 
+def showMap(m:list) -> None:
+    plt.figure("Rectangular Coordinate Map Visualisation")
+    plt.imshow(m, cmap="binary")
+
+    _w = len(m[0])
+    _h = len(m)
+
+    for i in range(_w):
+        for j in range(_h):
+            plt.text(j, i, i*_w + j+1,
+                ha="center", va="center", color="red")
+
+def showMapPath(m:list, path:list) -> None:
+    plt.figure("Rectangular Coordinate Path Visualisation")
+
+    _w = len(m[0])
+    _h = len(m)
+
+    for i in range(_w):
+        for j in range(_h):
+            plt.text(j, i, i*_w + j+1,
+                ha="center", va="center", color="green")
+    
+    for node in path:
+        j, i = node.pos
+        m[i][j] = 0.5
+
+    plt.imshow(m, cmap="binary")
+
 Graph = generateGraph(Map)
 start = Graph[0][0]
 end = Graph[-1][-1]
@@ -239,5 +275,8 @@ showGraph(Graph)
 showHeuristicMap(Graph)
 if Path is not None:
     showPath(Graph, Path)
+
+showMap(MAP)
+showMapPath(MAP, Path)
 
 plt.show()
