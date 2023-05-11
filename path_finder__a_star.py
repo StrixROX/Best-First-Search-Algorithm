@@ -33,7 +33,7 @@ from typing import Union
 Map = [
     [0, 0, 0, 0],
     [0, 1, 0, 1],
-    [0, 1, 1, 0],
+    [0, 1, 0, 0],
     [0, 1, 1, 0]
 ]
 
@@ -128,7 +128,7 @@ def showGraph(graph:list):
 
     plt.figure('Graph Visualisation')
     nx.draw_networkx(G,node_color=cmap)
-    plt.show()
+    # plt.show()
 
 # heuristic function: euclidean distance with obstacle detection
 def h(a:Node, b:Node) -> float:
@@ -175,12 +175,16 @@ def showHeuristicMap(graph:list):
     plt.title('Heuristic Function, h(i)')
     plt.xlabel('X-Axis')
     plt.ylabel('Y-Axis')
-    plt.imshow(hViz, cmap='binary', interpolation='nearest')
-    plt.show()
+    plt.imshow(hViz, cmap='Wistia', interpolation='nearest')
+    # plt.show()
 
 Graph = generateGraph(Map)
+start = Graph[0][0]
+end = Graph[-1][-1]
 
-path = a_star(start=Graph[0][0], end=Graph[-1][-1])
+path = a_star(start, end)
 print(path, 'Cost:', len(path or []))
-# showGraph(Graph)
-# showHeuristicMap(Graph)
+showGraph(Graph)
+showHeuristicMap(Graph)
+
+plt.show()
