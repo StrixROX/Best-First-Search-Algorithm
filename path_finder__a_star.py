@@ -2,7 +2,6 @@
 
 import networkx as nx
 import matplotlib.pyplot as plt
-from queue import PriorityQueue
 from typing import Union
 
 # n = 6
