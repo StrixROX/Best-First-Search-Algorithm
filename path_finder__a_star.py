@@ -36,6 +36,8 @@ Map = [
     [0, 1, 1, 0]
 ]
 
+# duplicate for graphing purposes
+# ignore
 MAP = []
 for i in Map:
     temp = []
@@ -76,6 +78,20 @@ class Node:
 
     def show(self) -> None:
         print(f'Node: {self.name}, Pos: {self.pos}, Neighbours: {self.neighbours}')
+
+# heuristic function: euclidean distance with obstacle detection
+def h(a:Node, b:Node) -> float:
+    # a to b
+
+    ax, ay = a.pos
+    bx, by = b.pos
+
+    dist = ((ax - bx)**2 + (ay-by)**2)**0.5
+
+    if a.isBlocked:
+        return float('inf')
+
+    return dist
 
 def generateGraph(Map:list) -> list:
     w = len(Map[0])
@@ -136,7 +152,7 @@ def showGraph(graph:list) -> None:
     nx.draw_networkx(G,node_color=cmap)
     # plt.show()
 
-def showPath(graph:list, path:list) -> None:
+def showGraphPath(graph:list, path:list) -> None:
     w = len(graph[0])
     h = len(graph)
 
@@ -177,21 +193,8 @@ def showPath(graph:list, path:list) -> None:
     nx.draw_networkx(G,node_color=cmap)
     # plt.show()
 
-# heuristic function: euclidean distance with obstacle detection
-def h(a:Node, b:Node) -> float:
-    # a to b
-
-    ax, ay = a.pos
-    bx, by = b.pos
-
-    dist = ((ax - bx)**2 + (ay-by)**2)**0.5
-
-    if a.isBlocked:
-        return float('inf')
-
-    return dist
-
-def a_star(start:Node, end:Node, visited:list = [], cost:float = 0) -> Union[list, None]:
+# recursive A* search algorithm (uniform cost)
+def a_star(start:Node, end:Node, visited:list = []) -> Union[list, None]:
     if start == end:
         return visited + [end]
     if h(start,end) == float('inf'):
@@ -199,11 +202,11 @@ def a_star(start:Node, end:Node, visited:list = [], cost:float = 0) -> Union[lis
 
     temp = list(start.neighbours)
     temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
-    temp.sort(key=lambda x: cost + h(x, end))
+    temp.sort(key=lambda x: h(x, end))
 
     for i in temp:
         if i not in visited:
-            res = a_star(i, end, visited + [start], cost + 1)
+            res = a_star(i, end, visited + [start])
             if res is not None:
                 return res
 
@@ -273,7 +276,7 @@ print(Path, 'Cost:', len(Path or []))
 showGraph(Graph)
 showHeuristicMap(Graph)
 if Path is not None:
-    showPath(Graph, Path)
+    showGraphPath(Graph, Path)
 
 showMap(MAP)
 showMapPath(MAP, Path)
