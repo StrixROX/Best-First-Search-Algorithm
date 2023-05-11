@@ -5,6 +5,38 @@ import matplotlib.pyplot as plt
 from queue import PriorityQueue
 from typing import Union
 
+# n = 6
+# Map = [[0 for i in range(n)] for j in range(n)]
+
+# Map = [
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,1,1,1,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0],
+#     [0,0,0,0,0,0,0,0,0,0]
+# ]
+
+# Map = [
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 1, 0, 0],
+# ]
+
+Map = [
+    [0, 0, 0, 0],
+    [0, 1, 0, 1],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0]
+]
+
 # graph node definition
 class Node:
     def __init__(self, name:int, pos:tuple, isBlocked:bool = False) -> None:
@@ -38,46 +70,6 @@ class Node:
 
     def show(self) -> None:
         print(f'Node: {self.name}, Pos: {self.pos}, Neighbours: {self.neighbours}')
-
-# heuristic function: euclidean distance with obstacle detection
-def h(a:Node, b:Node) -> float:
-
-    ax, ay = a.pos
-    bx, by = b.pos
-
-    return ((ax - bx)**2 + (ay-by)**2)**0.5
-
-# n = 6
-# Map = [[0 for i in range(n)] for j in range(n)]
-
-# Map = [
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,1,1,1,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0],
-#     [0,0,0,0,0,0,0,0,0,0]
-# ]
-
-# Map = [
-#     [0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 1, 0, 0],
-#     [0, 0, 0, 1, 0, 0],
-#     [0, 0, 0, 1, 0, 0],
-#     [0, 0, 0, 0, 0, 0],
-# ]
-
-Map = [
-    [0, 0, 0, 0],
-    [0, 1, 1, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0]
-]
 
 def generateGraph(Map:list) -> list:
     w = len(Map[0])
@@ -138,26 +130,33 @@ def showGraph(graph:list):
     nx.draw_networkx(G,node_color=cmap)
     plt.show()
 
-def a_star(start:Node, end:Node) -> Union[list, None]:
-    visited = []
-    pq = PriorityQueue()
-    pq.put((0, start)) # put the start node in pq to start search
+# heuristic function: euclidean distance with obstacle detection
+def h(a:Node, b:Node) -> float:
+    # a to b
 
-    while pq.not_empty:
-        cost, x = pq.get() # getting the node with least priority in pq and getting its cost(g(i)) and node itself
-        visited.append(x) # add this node to the visited list
+    ax, ay = a.pos
+    bx, by = b.pos
 
-        print(x)
+    dist = ((ax - bx)**2 + (ay-by)**2)**0.5
 
-        # if this node the goal node then return the path taken
-        if x == end:
-            return visited
+    if a.isBlocked:
+        return float('inf')
 
-        # pick the node with lowest f(i) = g(i) + h(i) value
-        # to traverse next and put it into pq
-        y = list(x.neighbours)
-        y.sort(key=lambda i: cost+h(i, end))
-        pq.put((cost + h(y[0], end), y[0]))
+    return dist
+
+def a_star(start:Node, end:Node, visited:list = [], cost:float = 0) -> Union[list, None]:
+    if start == end:
+        return visited + [end]
+
+    temp = list(start.neighbours)
+    temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
+    temp.sort(key=lambda x: h(x, end))
+
+    for i in temp:
+        if i not in visited:
+            res = a_star(i, end, visited + [start], cost + h(i, end))
+            if res is not None:
+                return res
 
     return None
 
@@ -181,6 +180,7 @@ def showHeuristicMap(graph:list):
 
 Graph = generateGraph(Map)
 
-# print(a_star(start=Graph[0][0], end=Graph[-1][-1]))
-showGraph(Graph)
+path = a_star(start=Graph[0][0], end=Graph[-1][-1])
+print(path, 'Cost:', len(path or []))
+# showGraph(Graph)
 # showHeuristicMap(Graph)
