@@ -87,8 +87,8 @@ class Node:
 
         return True
 
-    def __lt__(self, other):
-        return False
+    def __hash__(self):
+        return hash((self.id,) + self.pos)
 
     def show(self):
         # print(f'Node: {self.id}, Pos: {self.pos}, Neighbours: {self.neighbours}')
@@ -174,18 +174,104 @@ def h(a:Node, b:Node) -> float:
 
     return dist
 
-# A* search algorithm (uniform cost)
+# cost function: manhattan distance
+def g(a:Node, b:Node) -> float:
+    ax, ay = a.pos
+    bx, by = b.pos
+
+    return abs(ax - bx) + abs(ay - by)
+
+# recursive A* search algorithm (uniform cost)
+# def a_starViz(start, end, visited = []) -> Union[list, None]:
+#     start.setState(4)
+#     draw()
+#     if start == end:
+#         # reached goal
+#         visited.append(end)
+
+#         for i in visited[::-1]:
+#             i.setState(6)
+#             draw()
+
+#         return visited
+#     if h(start,end) == float('inf'):
+#         # reached obstacle
+#         return None
+
+#     # only consider the neighbours that are not blocked
+#     temp = list(filter(lambda x: h(x, end) != float('inf'), start.neighbours))
+#     # sort them by heuristic function only since it is uniform cost
+#     # otherwise there would be a separate cost function
+#     # added to the heuristic function value
+#     temp.sort(key=lambda x: h(x, end))
+
+#     for i in temp:
+#         i.setState(5)
+#         draw()
+#         if i not in visited:
+#             res = a_starViz(i, end, visited + [start])
+#             if res is not None:
+#                 # if we found the goal float it up the recursion chain
+#                 # and return the path to main program
+#                 return res
+#         i.setState(4)
+#         draw()
+
+#     # if no path could be found to goal
+#     return None
+
+# def a_starViz(start, end):
+#     count = 0
+#     visited = []
+#     pq = PriorityQueue()
+#     pq.put((0, count, start))
+
+#     while pq.not_empty:
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 quit()
+
+#             if event.type == pygame.KEYDOWN:
+#                 if event.key == pygame.K_q:
+#                     quit()
+
+#         cost, _, node = pq.get()
+#         if node in visited:
+#             continue
+#         visited.append(node)
+#         node.setState(4)
+#         # print(f"Added {node} to visited. {visited}")
+#         # print('4 |>', node)
+
+#         if node == end:
+#             for i in visited:
+#                 i.setState(6)
+#                 # print('6 |>', i)
+#             return visited
+        
+#         for i in node.neighbours:
+#             if i not in visited:
+#                 # print('\t', i, pq.queue)
+#                 count += 1
+#                 f_score = cost+g(node, i) + h(i, end)
+#                 if f_score == float('inf'):
+#                     continue
+#                 pq.put((f_score, count, i))
+#                 i.setState(5)
+
+#         draw()
+
 def a_starViz(start, end):
     count = 0
     open_set = PriorityQueue()
     open_set.put((0, count, start))
     came_from = {}
-    g_score = {node.id: float('inf') for row in Nodes for node in row}
-    g_score[start.id] = 0
-    f_score = {node.id: float('inf') for row in Nodes for node in row}
-    f_score[start.id] = h(start, end)
+    g_score = {node: float('inf') for row in Nodes for node in row}
+    g_score[start] = 0
+    f_score = {node: float('inf') for row in Nodes for node in row}
+    f_score[start] = h(start, end)
 
-    open_set_hash = {start.id}
+    open_set_hash = {start}
 
     while open_set.not_empty:
         for event in pygame.event.get():
@@ -197,29 +283,29 @@ def a_starViz(start, end):
                     quit()
         
         node = open_set.get()[2]
-        open_set_hash.remove(node.id)
+        open_set_hash.remove(node)
 
         if node == end:
             x = node
             while x != start:
                 x.setState(6)
-                x = came_from[x.id]
+                x = came_from[x]
             
             end.setState(3)
             return True
 
         for i in node.neighbours:
-            temp_g_score = g_score[node.id] + 1
+            temp_g_score = g_score[node] + 1
 
-            if temp_g_score < g_score[i.id]:
-                came_from[i.id] = node
-                g_score[i.id] = temp_g_score
-                f_score[i.id] = temp_g_score + h(i, end)
+            if temp_g_score < g_score[i]:
+                came_from[i] = node
+                g_score[i] = temp_g_score
+                f_score[i] = temp_g_score + h(i, end)
 
-                if i.id not in open_set_hash and not i.state == 1:
+                if i not in open_set_hash and not i.state == 1:
                     count += 1
-                    open_set.put((f_score[i.id], count, i))
-                    open_set_hash.add(i.id)
+                    open_set.put((f_score[i], count, i))
+                    open_set_hash.add(i)
                     i.setState(4)
         
         draw()
