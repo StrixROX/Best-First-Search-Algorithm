@@ -236,6 +236,13 @@ class RRT:
 			pygame.display.update()
 
 			self.tree.append(randNode)
+			i = 0
+			while i < len(self.traversable):
+				if randNode == self.traversable[i]:
+					self.traversable = self.traversable[:i] + self.traversable[i+1:]
+					continue
+
+				i += 1
 
 			nearestToEnd = self.findNearestNode(END_NODE)
 
