@@ -97,7 +97,7 @@ class Node(GridNode):
 		self.cost = _cost
 
 	def __eq__(self, __value):
-		if not isinstance(__value, Node):
+		if not isinstance(__value, (Node, GridNode)):
 				return False
 
 		return self.pos == __value.pos
@@ -140,21 +140,18 @@ class RRT:
 		return traversable
 
 	def pathIsBlocked(self, a, b):
-		x1, y1 = a.pos
-		x2, y2 = b.pos
-		
+		_x1, _y1 = a.pos
+		_x2, _y2 = b.pos
+
+		x1 = min(_x1, _x2)
+		x2 = max(_x1, _x2)
+		y1 = min(_y1, _y2)
+		y2 = max(_y1, _y2)
+
 		for i in range(y1, y2 + 1):
 			for j in range(x1, x2 + 1):
-				if self.grid[i][j].state == 1:
+				if Node((j, i)) in self.obstacles:
 					return True
-
-		# distAB = euclideanDistance(a, b)
-		# for i in self.obstacles:
-		# 	distAI = euclideanDistance(a, i)
-		# 	distBI = euclideanDistance(b, i)
-
-		# 	if distAI + distBI == distAB:
-		# 		return True
 
 		return False
 
@@ -164,44 +161,44 @@ class RRT:
 		return (nodes[0], euclideanDistance(nodes[0], a))
 
 	def createRandNode(self):
-		while True:
-			randGridNode = random.choice(self.traversable)
-			randNode = Node(randGridNode.pos)
-			nearestNode, distance = self.findNearestNode(randNode)
+		randGridNode = random.choice(self.traversable)
+		randNode = Node(randGridNode.pos)
+		nearestNode, distance = self.findNearestNode(randNode)
 
-			if self.pathIsBlocked(randNode, nearestNode):
-				print(randNode.pos, nearestNode.pos)
-				continue
+		if distance <= MAXLEN:
+			if randNode in self.obstacles or self.pathIsBlocked(randNode, nearestNode):
+				return self.createRandNode()
 
-			if distance <= MAXLEN:
-				# nearestNode.next = randNode
-				randNode.prev = nearestNode
-				randNode.cost = nearestNode.cost + distance
+			# nearestNode.next = randNode
+			randNode.prev = nearestNode
+			randNode.cost = nearestNode.cost + distance
 
-				return (randNode, nearestNode)
+			return (randNode, nearestNode)
+
+		else:
+			x1, y1 = nearestNode.pos
+			x2, y2 = randNode.pos
+
+			if x2 != x1:
+				tan = (y2 - y1) / (x2 - x1)
+
+				x = x1 + MAXLEN / ((1 + tan**2)**0.5) * (1 if x1 < x2 else -1)
+				y = y1 + MAXLEN / ((1 + tan**2)**0.5) * (1 if y1 < y2 else -1) * tan
 			else:
-				x1, y1 = nearestNode.pos
-				x2, y2 = randNode.pos
-
-				if x2 != x1:
-					tan = (y2 - y1) / (x2 - x1)
-
-					x = x1 + MAXLEN / ((1 + tan**2)**0.5) * (1 if x1 < x2 else -1)
-					y = y1 + MAXLEN / ((1 + tan**2)**0.5) * (1 if y1 < y2 else -1) * tan
-				else:
-					x = x1
-					y = y1 + MAXLEN * (1 if y1 < y2 else -1)
+				x = x1
+				y = y1 + MAXLEN * (1 if y1 < y2 else -1)
 
 
-				newNode = Node((int(x), int(y)))
-				newNode.prev = nearestNode
-				newNode.cost = nearestNode.cost + MAXLEN
+			newNode = Node((int(x), int(y)))
 
-				if newNode in self.obstacles:
-					continue
-				# nearestNode.next = newNode
+			if newNode in self.obstacles or self.pathIsBlocked(newNode, nearestNode):
+				return self.createRandNode()
 
-				return (newNode, nearestNode)
+			newNode.prev = nearestNode
+			newNode.cost = nearestNode.cost + MAXLEN
+			# nearestNode.next = newNode
+
+			return (newNode, nearestNode)
 
 	def drawLine(self, p1, p2, color = TURQUOISE):
 		if p1 is None or p2 is None:
@@ -230,7 +227,8 @@ class RRT:
 			pygame.display.update()
 
 	def run(self):
-		while self.findNearestNode(END_NODE)[1] > MAXLEN:
+		nearestToEnd = self.findNearestNode(END_NODE)
+		while nearestToEnd[1] > MAXLEN or (nearestToEnd[1] <= MAXLEN and self.pathIsBlocked(nearestToEnd[0], END_NODE)):
 			randNode, nearestToRandNode = self.createRandNode()
 
 			self.drawPoint(randNode)
@@ -238,6 +236,8 @@ class RRT:
 			pygame.display.update()
 
 			self.tree.append(randNode)
+
+			nearestToEnd = self.findNearestNode(END_NODE)
 
 		self.tracePath()
 
