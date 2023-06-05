@@ -104,33 +104,33 @@ class Node:
 
 Nodes = [[Node(i*COLS + j+1, (j, i)) for j in range(COLS)] for i in range(ROWS)]
 
-def scalarMultiply(collection, scalar):
-    temp = map(lambda x: x * scalar, collection)
+def scalarMultiply(vector, scalar):
+    temp = map(lambda x: x * scalar, vector)
 
-    return type(collection)(temp)
+    return type(vector)(temp)
 
-def scalarAdd(collection, scalar):
-    temp = map(lambda x: x + scalar, collection)
+def scalarAdd(vector, scalar):
+    temp = map(lambda x: x + scalar, vector)
 
-    return type(collection)(temp)
+    return type(vector)(temp)
 
-def vectorAdd(collection1, collection2):
-    if len(collection1) != len(collection2):
-        raise ValueError("Attempting to add collections of different shapes")
+def vectorAdd(vector1, vector2):
+    if len(vector1) != len(vector2):
+        raise ValueError("Attempting to add vectors of different shapes")
 
     out = []
-    for i in range(len(collection1)):
-        out.append(collection1[i] + collection2[i])
+    for i in range(len(vector1)):
+        out.append(vector1[i] + vector2[i])
 
     return tuple(out)
 
-def dotProduct(collection1, collection2):
-    if len(collection1) != len(collection2):
-        raise ValueError("Attempting to add collections of different shapes")
+def dotProduct(vector1, vector2):
+    if len(vector1) != len(vector2):
+        raise ValueError("Attempting to multiply vectors of different shapes")
 
     out = []
-    for i in range(len(collection1)):
-        out.append(collection1[i] * collection2[i])
+    for i in range(len(vector1)):
+        out.append(vector1[i] * vector2[i])
 
     return tuple(out)
 
@@ -164,11 +164,11 @@ def drawBoundingBoxes():
         #     pygame.draw.circle(window, TURQUOISE, ((x + 0.5) * WIDTH / COLS + WIDTH/2, (y + 0.5) * HEIGHT / ROWS + HEIGHT/2), 5, 0)
 
         for i in range(4): # because here bounding box contains 4 vertices
-            x1, y1 = scalarMultiply(bbox[i], BOUNDING_BOX_SCALING_FACTOR)
+            x1, y1 = vectorAdd(scalarMultiply(bbox[i], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
             for j in range(i+1, 4): # with this we basically get all combinations of the 4 vertices, ie, 6 combinations
-                x2, y2 = scalarMultiply(bbox[j], BOUNDING_BOX_SCALING_FACTOR)
+                x2, y2 = vectorAdd(scalarMultiply(bbox[j], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
 
-                pygame.draw.line(window, TURQUOISE, ((x1 + 0.5) + WIDTH/2, (y1 + 0.5) + HEIGHT/2), ((x2 + 0.5) + WIDTH/2, (y2 + 0.5) + HEIGHT/2), 1)
+                pygame.draw.line(window, TURQUOISE, (x1, y1), (x2, y2), 1)
 
 def getEdgeLineFunction(v1, v2):
     # edge line function: f(x,y) = y - mx - c
@@ -189,7 +189,6 @@ def pnpoly(nvert, vertx, verty, testx, testy):
         if ((verty[i] > testy) != (verty[j] > testy)) and (testx < ((vertx[j] - vertx[i]) * (testy - verty[i]) / (verty[j] - verty[i]) + vertx[i])):
             c = not c 
     return c
-# pnpoly(4, [-2, 0, 3.2, -3.2], [2.3, 3.4, 1.56, -1.56], 0, 0)
 
 def traingleArea(p1, p2, p3):
     x1, y1 = p1
@@ -235,7 +234,7 @@ def mutateNodesUsingBoundingBox(bbox):
 
     A_ABCD = traingleArea(A, B, C) + traingleArea(A, D, C)
 
-    def isNodeInsideBoundingBox(x, y):
+    def isPointInsideBoundingBox(x, y):
         # Area check
         P = (x, y)
         A_AB = traingleArea(P, A, B)
@@ -266,23 +265,23 @@ def mutateNodesUsingBoundingBox(bbox):
 
             # reduces checks for points that are "more" inside
             # ie, greater overlap
-            if isNodeInsideBoundingBox(x, y):
+            if isPointInsideBoundingBox(x, y):
                 Nodes[J][I].setState(1)
                 continue
 
             # if that comes out as false,
             # see if any of the corners of the cell
             # is inside the bounding box
-            t = False
+            atLeastOneInside = False
             for i in [0, 1]:
-                if t:
+                if atLeastOneInside:
                     break
                 for j in [0, 1]:
                     x, y = dotProduct((J + j, I + i), (cWidth, cHeight))
-                    t = isNodeInsideBoundingBox(x, y)
-                    if t:
+                    atLeastOneInside = isPointInsideBoundingBox(x, y)
+                    if atLeastOneInside:
                         break
-            if t:
+            if atLeastOneInside:
                 Nodes[J][I].setState(1)
 
 def draw():
@@ -342,9 +341,6 @@ def handleClicks():
                 END_NODE = node
                 END_NODE.setState(3)
 
-def setupNodes():
-    pass
-
 # heuristic function: euclidean distance
 def h(a:Node, b:Node) -> float:
     # a to b
@@ -369,7 +365,7 @@ def g(a:Node, b:Node) -> float:
 
     return dist
 
-def a_starViz(start, end):
+def a_star(start, end):
     count = 0
     open_set = PriorityQueue()
     open_set.put((0, count, start))
@@ -425,10 +421,10 @@ def a_starViz(start, end):
 def setup():
     # temp
     global START_NODE, END_NODE
-    # START_NODE = Nodes[0][0]
-    # END_NODE = Nodes[-1][-1]
-    # START_NODE.setState(2)
-    # END_NODE.setState(3)
+    START_NODE = Nodes[0][0]
+    END_NODE = Nodes[-1][-1]
+    START_NODE.setState(2)
+    END_NODE.setState(3)
 
     # Make node connections
     for i in range(ROWS):
@@ -437,6 +433,15 @@ def setup():
                 Nodes[i][j].connect(Nodes[i][j + 1])
             if i < ROWS - 1:
                 Nodes[i][j].connect(Nodes[i+1][j])
+
+def printPath():
+    a = []
+    for i in Nodes:
+        for j in i:
+            if j.state == 6:
+                a.append(j.pos)
+
+    print(a)
 
 def loop():
     global START_SEARCH
@@ -447,8 +452,15 @@ def loop():
     handleClicks()
 
     if START_SEARCH:
-        pathFound = a_starViz(START_NODE, END_NODE)
+        # with open('./ded', 'rb') as f:
+        #     path = pickle.load(f)
+        # for i in range(len(path)):
+        #     for j in range(len(path[i])):
+        #         Nodes[i][j].setState(path[i][j][1])
+        # draw()
+        pathFound = a_star(START_NODE, END_NODE)
         if pathFound:
+            printPath()
             draw()
         START_SEARCH = 0
 
