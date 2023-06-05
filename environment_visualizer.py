@@ -5,9 +5,16 @@ import pickle
 pygame.init()
 
 BOUNDING_BOX_SCALING_FACTOR = 100
-BOUNDING_BOX_DATA_LOC = 'out'
+# BOUNDING_BOX_DATA_LOC = 'out'
+BOUNDING_BOX_DATA_LOC = '/mnt/d/out'
+BOUNDING_BOX_DATA_LOC_ROBOT = '/mnt/d/out_robot'
+
+ROBOT_BOUNDING_BOX_SIZE = 0
+
 with open(BOUNDING_BOX_DATA_LOC, 'rb') as f:
     bbox_all = pickle.load(f)
+with open(BOUNDING_BOX_DATA_LOC_ROBOT, 'rb') as f:
+    bbox_robot = pickle.load(f)
 
 # Environment dimensions - 10m x 10m
 DIMENSION_X, DIMENSION_Y = (10, 10) # meters
@@ -157,7 +164,8 @@ def drawGrid():
 
 def drawBoundingBoxes():
     global BOUNDING_BOX_SCALING_FACTOR
-    for bbox in bbox_all:
+    # making bounding boxes of all obstacles + the robot
+    for bbox in bbox_all + bbox_robot:
         # for v in bbox:
         #     x = v[0] * scalingFactor
         #     y = v[1] * scalingFactor
@@ -215,7 +223,7 @@ def mutateNodesUsingBoundingBox(bbox):
     A = vectorAdd(scalarMultiply(bbox[0], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
 
     others = bbox[1:]
-    others.sort(key=lambda x: distance(x, A))
+    others.sort(key=lambda x: distance(x, bbox[0]))
 
     B = vectorAdd(scalarMultiply(others[0], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
     C = vectorAdd(scalarMultiply(others[2], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
@@ -226,13 +234,16 @@ def mutateNodesUsingBoundingBox(bbox):
     for i in [A, B, C, D]:
         Xs.append(i[0])
         Ys.append(i[1])
+    
+    clearanceX = int(ROBOT_BOUNDING_BOX_SIZE // cWidth)
+    clearanceY = int(ROBOT_BOUNDING_BOX_SIZE // cHeight)
 
-    Imin = int(min(Ys) // cHeight)
-    Imax = int(max(Ys) // cHeight)
-    Jmin = int(min(Xs) // cWidth)
-    Jmax = int(max(Xs) // cWidth)
+    Imin = int(min(Ys) // cHeight) - clearanceY
+    Imax = int(max(Ys) // cHeight) + clearanceY
+    Jmin = int(min(Xs) // cWidth) - clearanceX
+    Jmax = int(max(Xs) // cWidth) + clearanceX
 
-    A_ABCD = traingleArea(A, B, C) + traingleArea(A, D, C)
+    A_ABCD = traingleArea(A, B, C) + traingleArea(A, D, C)  
 
     def isPointInsideBoundingBox(x, y):
         # Area check
@@ -253,8 +264,19 @@ def mutateNodesUsingBoundingBox(bbox):
 
         return False
 
+    def increaseInclusionRange(r, clearance):
+        valMin = min(r)
+        valMax = max(r)
+
+        lhs = list(range(valMax + 1, valMax + 1 + clearance))
+        rhs = list(range(valMin - clearance, valMin))
+
+        return lhs + r + rhs
+
     for I in range(Imin, Imax + 1):
         for J in range(Jmin, Jmax + 1):
+            if I < 0 or J < 0:
+                continue
             if I >= len(Nodes) or J >= len(Nodes[0]):
                 continue
 
@@ -263,26 +285,40 @@ def mutateNodesUsingBoundingBox(bbox):
             # Nodes[J][I].setState(2)
             x, y = dotProduct((J + 0.5, I + 0.5), (cWidth, cHeight))
 
+            ### Marking points inside the bounding box
             # reduces checks for points that are "more" inside
             # ie, greater overlap
             if isPointInsideBoundingBox(x, y):
                 Nodes[J][I].setState(1)
                 continue
 
+            ### Marking points along the bounding box edges
             # if that comes out as false,
             # see if any of the corners of the cell
             # is inside the bounding box
             atLeastOneInside = False
-            for i in [0, 1]:
+            for i in increaseInclusionRange([0, 1], clearanceY):
                 if atLeastOneInside:
                     break
-                for j in [0, 1]:
+                for j in increaseInclusionRange([0, 1], clearanceX):
                     x, y = dotProduct((J + j, I + i), (cWidth, cHeight))
                     atLeastOneInside = isPointInsideBoundingBox(x, y)
                     if atLeastOneInside:
                         break
             if atLeastOneInside:
                 Nodes[J][I].setState(1)
+
+    # 3. create clearance around the walls
+    for i in range(clearanceY):
+        for j in range(COLS):
+            Nodes[j][i].setState(1)
+            Nodes[COLS - j - 1][ROWS - i - 1].setState(1)
+    
+    for i in range(ROWS):
+        for j in range(clearanceX):
+            Nodes[j][i].setState(1)
+            Nodes[COLS - j - 1][ROWS - i - 1].setState(1)
+
 
 def draw():
     for bbox in bbox_all:
@@ -421,6 +457,7 @@ def a_star(start, end):
 def setup():
     # temp
     global START_NODE, END_NODE
+    global ROBOT_BOUNDING_BOX_SIZE
     START_NODE = Nodes[0][0]
     END_NODE = Nodes[-1][-1]
     START_NODE.setState(2)
@@ -433,6 +470,12 @@ def setup():
                 Nodes[i][j].connect(Nodes[i][j + 1])
             if i < ROWS - 1:
                 Nodes[i][j].connect(Nodes[i+1][j])
+
+    # getting size of the robot
+    distances = list(map(lambda x: distance(x, bbox_robot[0][0]), bbox_robot[0]))
+    diagonal = max(distances)
+
+    ROBOT_BOUNDING_BOX_SIZE = diagonal/2 * BOUNDING_BOX_SCALING_FACTOR
 
 def printPath():
     a = []
