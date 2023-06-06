@@ -9,12 +9,19 @@ BOUNDING_BOX_SCALING_FACTOR = 100
 BOUNDING_BOX_DATA_LOC = '/mnt/d/out'
 BOUNDING_BOX_DATA_LOC_ROBOT = '/mnt/d/out_robot'
 
+POS_DATA_LOC_ROBOT = '/mnt/d/out_robotPos'
+POS_DATA_LOC_TARGET = '/mnt/d/out_targetPos'
+
 ROBOT_BOUNDING_BOX_SIZE = 0
 
 with open(BOUNDING_BOX_DATA_LOC, 'rb') as f:
     bbox_all = pickle.load(f)
 with open(BOUNDING_BOX_DATA_LOC_ROBOT, 'rb') as f:
     bbox_robot = pickle.load(f)
+with open(POS_DATA_LOC_ROBOT, 'rb') as f:
+    robotPos = pickle.load(f)
+with open(POS_DATA_LOC_TARGET, 'rb') as f:
+    targetPos = pickle.load(f)
 
 # Environment dimensions - 10m x 10m
 DIMENSION_X, DIMENSION_Y = (10, 10) # meters
@@ -319,7 +326,6 @@ def mutateNodesUsingBoundingBox(bbox):
             Nodes[j][i].setState(1)
             Nodes[COLS - j - 1][ROWS - i - 1].setState(1)
 
-
 def draw():
     for bbox in bbox_all:
         mutateNodesUsingBoundingBox(bbox)
@@ -402,6 +408,7 @@ def g(a:Node, b:Node) -> float:
     return dist
 
 def a_star(start, end):
+    PATH = []
     count = 0
     open_set = PriorityQueue()
     open_set.put((0, count, start))
@@ -429,10 +436,11 @@ def a_star(start, end):
             x = node
             while x != start:
                 x.setState(6)
+                PATH.insert(0, tuple(map(lambda t: t + 0.5, x.pos[::-1])))
                 x = came_from[x]
             
             end.setState(3)
-            return True
+            return PATH
 
         for i in node.neighbours:
             temp_g_score = g_score[node] + 1
@@ -452,14 +460,30 @@ def a_star(start, end):
         # uncomment to render each step of the algorithm
         # draw()
     
-    return False
+    return -1
 
 def setup():
     # temp
     global START_NODE, END_NODE
     global ROBOT_BOUNDING_BOX_SIZE
-    START_NODE = Nodes[0][0]
-    END_NODE = Nodes[-1][-1]
+    global robotPos, targetPos
+
+    startX, startY, startZ = robotPos
+    endX, endY, endZ = targetPos
+
+    cWidth = WIDTH / COLS / BOUNDING_BOX_SCALING_FACTOR
+    cHeight = HEIGHT / ROWS / BOUNDING_BOX_SCALING_FACTOR
+
+    startX, startY = vectorAdd((startX, startY), (WIDTH/2/BOUNDING_BOX_SCALING_FACTOR, HEIGHT/2/BOUNDING_BOX_SCALING_FACTOR))
+    endX, endY = vectorAdd((endX, endY), (WIDTH/2/BOUNDING_BOX_SCALING_FACTOR, HEIGHT/2/BOUNDING_BOX_SCALING_FACTOR))
+
+    startX = int(startX // cWidth)
+    startY = int(startY // cHeight)
+    endX = int(endX // cWidth)
+    endY = int(endY // cHeight)
+    
+    START_NODE = Nodes[startX][startY]
+    END_NODE = Nodes[endX][endY]
     START_NODE.setState(2)
     END_NODE.setState(3)
 
@@ -477,14 +501,19 @@ def setup():
 
     ROBOT_BOUNDING_BOX_SIZE = diagonal/2 * BOUNDING_BOX_SCALING_FACTOR
 
-def printPath():
-    a = []
-    for i in Nodes:
-        for j in i:
-            if j.state == 6:
-                a.append(j.pos)
+def printPath(path):
+    map(mutateNodesUsingBoundingBox, bbox_all)
+    drawNodes()
+    drawBoundingBoxes()
+    drawGrid()
 
-    print(a)
+    if path != -1:
+        for i in range(len(path) - 1):
+            pygame.draw.circle(window, DARKGREY, dotProduct(path[i], (WIDTH/COLS, HEIGHT/ROWS)), 3, 0)
+            pygame.draw.line(window, DARKGREY, dotProduct(path[i], (WIDTH/COLS, HEIGHT/ROWS)), dotProduct(path[i+1], (WIDTH/COLS, HEIGHT/ROWS)), 1)
+        pygame.draw.circle(window, DARKGREY, dotProduct(path[-1], (WIDTH/COLS, HEIGHT/ROWS)), 3, 0)
+
+    pygame.display.update()
 
 def loop():
     global START_SEARCH
@@ -503,8 +532,10 @@ def loop():
         # draw()
         pathFound = a_star(START_NODE, END_NODE)
         if pathFound:
-            printPath()
-            draw()
+            print(pathFound)
+            printPath(pathFound)
+            import time
+            time.sleep(10)
         START_SEARCH = 0
 
     draw()
