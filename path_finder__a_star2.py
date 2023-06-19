@@ -40,6 +40,9 @@ class Node:
         self.pos = pos
         self.neighbours = []
         self.state = 0
+        self.g = float('inf')
+        self.h = float('inf')
+        self.f = float('inf')
         # 0: empty, traversable node
         # 1: blocked, non-traversable node
         # 2: start node
@@ -264,16 +267,20 @@ def g(a:Node, b:Node) -> float:
 def a_starViz(start, end):
     count = 0
     open_set = PriorityQueue()
-    open_set.put((0, count, start))
+    open_set_hash = {}
     came_from = {}
-    g_score = {node: float('inf') for row in Nodes for node in row}
-    g_score[start] = 0
-    f_score = {node: float('inf') for row in Nodes for node in row}
-    f_score[start] = h(start, end)
+    closed_set = []
 
-    open_set_hash = {start}
+    start.g = 0
+    start.h = h(start, end)
+    start.f = start.g + start.h
 
-    while open_set.not_empty:
+    open_set.put((0, count, start))
+    open_set_hash[start] = (0, count, start)
+    came_from[start] = None
+
+    while len(open_set.queue) != 0:
+        print(open_set.queue, len(open_set.queue))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
@@ -283,34 +290,105 @@ def a_starViz(start, end):
                     quit()
         
         node = open_set.get()[2]
-        open_set_hash.remove(node)
 
         if node == end:
-            x = node
-            while x != start:
-                x.setState(6)
-                x = came_from[x]
-            
+            while came_from[node] is not None:
+                node = came_from[node]
+                node.setState(6)
             end.setState(3)
             return True
+        
+        closed_set.append(node)
 
         for i in node.neighbours:
-            temp_g_score = g_score[node] + 1
+            if i.state == 1:
+                continue
+            
+            _g = node.g + g(node, i)
+            _h = h(i, end)
+            _f = _g + _h
+            
+            print("checking", i, _f)
 
-            if temp_g_score < g_score[i]:
+            if _f < i.f:
                 came_from[i] = node
-                g_score[i] = temp_g_score
-                f_score[i] = temp_g_score + h(i, end)
 
-                if i not in open_set_hash and not i.state == 1:
+                if not (i in open_set.queue or i in closed_set):
                     count += 1
-                    open_set.put((f_score[i], count, i))
-                    open_set_hash.add(i)
+                    i.g, i.h, i.f = _g, _h, _f
+                    open_set.put((_f, count, i))
+                    open_set_hash[i] = (_f, count, i)
                     i.setState(4)
+
+                if i in open_set.queue:
+                    hash = open_set_hash[i]
+                    i.g, i.h, i.f = _g, _h, _f
+                    open_set.put((_f, hash[1], i))
+                    open_set_hash[i] = (_f, hash[1], i)
+
+                if i in closed_set:
+                    ind = closed_set.index(i)
+                    closed_set = closed_set[:ind] + closed_set[ind+1:]
+
+                    hash = open_set_hash[i]
+                    i.g, i.h, i.f = _g, _h, _f
+                    open_set.put((_f, hash[1], i))
+                    open_set_hash[i] = (_f, hash[1], i)
         
         draw()
-    
+
     return False
+
+# def a_starViz(start, end):
+#     count = 0
+#     open_set = PriorityQueue()
+#     open_set.put((0, count, start))
+#     came_from = {}
+#     g_score = {node: float('inf') for row in Nodes for node in row}
+#     g_score[start] = 0
+#     f_score = {node: float('inf') for row in Nodes for node in row}
+#     f_score[start] = h(start, end)
+
+#     open_set_hash = {start}
+
+#     while open_set.not_empty:
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 quit()
+
+#             if event.type == pygame.KEYDOWN:
+#                 if event.key == pygame.K_q:
+#                     quit()
+        
+#         node = open_set.get()[2]
+#         open_set_hash.remove(node)
+
+#         if node == end:
+#             x = node
+#             while x != start:
+#                 x.setState(6)
+#                 x = came_from[x]
+            
+#             end.setState(3)
+#             return True
+
+#         for i in node.neighbours:
+#             temp_g_score = g_score[node] + 1
+
+#             if temp_g_score < g_score[i]:
+#                 came_from[i] = node
+#                 g_score[i] = temp_g_score
+#                 f_score[i] = temp_g_score + h(i, end)
+
+#                 if i not in open_set_hash and not i.state == 1:
+#                     count += 1
+#                     open_set.put((f_score[i], count, i))
+#                     open_set_hash.add(i)
+#                     i.setState(4)
+        
+#         draw()
+    
+#     return False
 
 def setup():
     # temp
@@ -338,7 +416,7 @@ def loop():
     handleClicks()
 
     if START_SEARCH:
-        a_starViz(START_NODE, END_NODE)
+        print(a_starViz(START_NODE, END_NODE))
         START_SEARCH = 0
 
     draw()
