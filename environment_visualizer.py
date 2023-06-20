@@ -1,30 +1,52 @@
 import pygame
 from queue import PriorityQueue
 import pickle
+import random
 
 pygame.init()
 
-BOUNDING_BOX_SCALING_FACTOR = 100
-# BOUNDING_BOX_DATA_LOC = 'out'
-BOUNDING_BOX_DATA_LOC = '/mnt/d/out'
+BOUNDING_BOX_SCALING_FACTOR = 65
 BOUNDING_BOX_DATA_LOC_ROBOT = '/mnt/d/out_robot'
+BOUNDING_BOX_DATA_LOC = '/mnt/d/out_boundingBoxes'
+OBSTACLE_DATA_LOC_ALL = '/mnt/d/out_obstaclesAll'
+OBSTACLE_DATA_LOC_MOVING = '/mnt/d/out_obstaclesMoving'
+OBSTACLE_DATA_LOC_STATIC = '/mnt/d/out_obstaclesStatic'
+OBSTACLE_DATA_LOC_TREES = '/mnt/d/out_obstaclesTrees'
 
 POS_DATA_LOC_ROBOT = '/mnt/d/out_robotPos'
 POS_DATA_LOC_TARGET = '/mnt/d/out_targetPos'
 
 ROBOT_BOUNDING_BOX_SIZE = 0
 
-with open(BOUNDING_BOX_DATA_LOC, 'rb') as f:
-    bbox_all = pickle.load(f)
 with open(BOUNDING_BOX_DATA_LOC_ROBOT, 'rb') as f:
     bbox_robot = pickle.load(f)
-with open(POS_DATA_LOC_ROBOT, 'rb') as f:
-    robotPos = pickle.load(f)
-with open(POS_DATA_LOC_TARGET, 'rb') as f:
-    targetPos = pickle.load(f)
+with open(BOUNDING_BOX_DATA_LOC, 'rb') as f:
+    bbox_all = pickle.load(f)
+with open(OBSTACLE_DATA_LOC_ALL, 'rb') as f:
+    obstacles_all = pickle.load(f)
+with open(OBSTACLE_DATA_LOC_MOVING, 'rb') as f:
+    obstacles_moving = pickle.load(f)
+with open(OBSTACLE_DATA_LOC_STATIC, 'rb') as f:
+    obstacles_static = pickle.load(f)
+with open(OBSTACLE_DATA_LOC_TREES, 'rb') as f:
+    obstacles_trees = pickle.load(f)
 
-# Environment dimensions - 10m x 10m
-DIMENSION_X, DIMENSION_Y = (10, 10) # meters
+with open(POS_DATA_LOC_ROBOT, 'rb') as f:
+    robot_pos = pickle.load(f)
+with open(POS_DATA_LOC_TARGET, 'rb') as f:
+    target_pos = pickle.load(f)
+
+# with open(BOUNDING_BOX_DATA_LOC, 'rb') as f:
+#     bbox_all = pickle.load(f)
+# with open(BOUNDING_BOX_DATA_LOC_ROBOT, 'rb') as f:
+#     bbox_robot = pickle.load(f)
+# with open(POS_DATA_LOC_ROBOT, 'rb') as f:
+#     robotPos = pickle.load(f)
+# with open(POS_DATA_LOC_TARGET, 'rb') as f:
+#     targetPos = pickle.load(f)
+
+# Environment dimensions - 15m x 15m
+DIMENSION_X, DIMENSION_Y = (15, 15) # meters
 WIDTH, HEIGHT = (DIMENSION_X * BOUNDING_BOX_SCALING_FACTOR, DIMENSION_Y * BOUNDING_BOX_SCALING_FACTOR) # 1px = 1cm
 
 # Grid dimensions
@@ -163,27 +185,166 @@ def drawNodes():
             pygame.draw.rect(window, Nodes[i][j].getColor(), (i*cWidth, j*cHeight, (i + 1)*cWidth, (j + 1)*cHeight), 0)
 
 def drawGrid():
+    return
     for r in range(ROWS - 1):
         pygame.draw.line(window, GREY, (0, (r+1)*HEIGHT/ROWS), (WIDTH, (r+1)*HEIGHT/ROWS))
 
     for c in range(COLS - 1):
         pygame.draw.line(window, GREY, ((c+1)*WIDTH/COLS, 0), ((c+1)*WIDTH/COLS, HEIGHT))
+ 
+obstacles_visible = [i for i in obstacles_static if i in obstacles_trees.keys()]
+# obstacles_visible = [i for i in obstacles_static if i in list(obstacles_trees.keys())]
+
+def getCorrectBBoxLimits(handle):
+    bbox_combined = []
+    for j in obstacles_trees[handle]:
+        bbox_combined += bbox_all[j]
+
+    Xs = [p[0] for p in bbox_combined]
+    Ys = [p[1] for p in bbox_combined]
+
+    return min(Xs), max(Xs), min(Ys), max(Ys)
+
+def getCorrectBBox(handle):
+    xmin, xmax, ymin, ymax = getCorrectBBoxLimits(handle)
+
+    bbox_new = [(i, j) for i in [xmin, xmax] for j in [ymin, ymax]]
+
+    return bbox_new
+
+def resetScene():
+    global bbox_all, bbox_robot
+    global obstacles_all, obstacles_moving, obstacles_static, obstacles_trees
+    global robot_pos, target_pos
+
+    global obstacles_visible
+
+    for i in obstacles_visible:
+        bbox_all[i] = getCorrectBBox(i)
+
+    # rearrange visible obstacles
+    lowX = (-1) * DIMENSION_X / 2
+    highX = DIMENSION_X / 2
+    lowY = (-1) * DIMENSION_Y / 2
+    highY = DIMENSION_Y / 2
+
+    done = {}
+
+    def isOverlapping(limits1, limits2):
+        x1, X1, y1, Y1 = limits1
+        x2, X2, y2, Y2 = limits2
+
+        if (x1 <= x2 <= X1) or (x1 <= X2 <= X1):
+            if (y1 <= y2 <= Y1) or (y1 <= Y2 <= Y1):
+                return True
+        
+        return False
+
+    def displaceObstacle(obs, delX, delY):
+        for i in range(len(bbox_all[obs])):
+            bbox_all[obs][i] = vectorAdd(bbox_all[obs][i], (delX, delY))
+
+    for obs in obstacles_trees.keys():
+        if obs not in obstacles_static:
+            continue
+
+        if obs in done.keys():
+            continue
+
+        bbox = bbox_all
+
+    for obs in obstacles_trees.keys():
+        if obs not in obstacles_static:
+            continue
+
+        if obs in done.keys():
+            continue
+
+        bbox = bbox_all[obs]
+        Xs = [p[0] for p in bbox]
+        Ys = [p[1] for p in bbox]
+
+        xmin, xmax, ymin, ymax = min(Xs), max(Xs), min(Ys), max(Ys)
+        xmid = (xmax + xmin)/2
+        ymid = (ymax + ymin)/2
+
+        trying = True
+        while trying:
+            delX = random.uniform(lowX + abs(xmid - xmin), highX - abs(xmax - xmid)) - xmid
+            delY = random.uniform(lowY + abs(ymid - ymin), highY - abs(ymax - ymid)) - ymid
+
+            newLimits = [xmin+delX, xmax+delX, ymin+delY, ymax+delY]
+            
+            trying = False
+            for i in done:
+                if isOverlapping(done[i], newLimits) or isOverlapping(newLimits, done[i]):
+                    trying = True
+                    break
+            
+            if not trying:
+                done[obs] = newLimits
+                displaceObstacle(obs, delX, delY)
+
+# # temp check
+# for i in range(len(obstacles_visible)):
+#     bbox = bbox_all[obstacles_visible[i]]
+#     Xs = [p[0] for p in bbox]
+#     Ys = [p[1] for p in bbox]
+
+#     xmin, xmax, ymin, ymax = min(Xs), max(Xs), min(Ys), max(Ys)
+
+#     limits1 = [xmin, xmax, ymin, ymax]
+#     for j in range(i, len(obstacles_visible)):
+#         _bbox = bbox_all[obstacles_visible[j]]
+#         _Xs = [p[0] for p in _bbox]
+#         _Ys = [p[1] for p in _bbox]
+
+#         _xmin, _xmax, _ymin, _ymax = min(_Xs), max(_Xs), min(_Ys), max(_Ys)
+
+#         limits2 = [_xmin, _xmax, _ymin, _ymax]
+
+#         check1 = isOverlapping(limits1, limits2)
+#         check2 = isOverlapping(limits2, limits1)
+#         if (check1 or check2) and i != j:
+#             print(check1, check2)
+#             print(obstacles_visible[i], obstacles_visible[j])
 
 def drawBoundingBoxes():
     global BOUNDING_BOX_SCALING_FACTOR
+    global obstacles_visible
+
     # making bounding boxes of all obstacles + the robot
-    for bbox in bbox_all + bbox_robot:
+    # for obs in obstacles_visible:
+    for obs in obstacles_static:
         # for v in bbox:
         #     x = v[0] * scalingFactor
         #     y = v[1] * scalingFactor
         #     pygame.draw.circle(window, TURQUOISE, ((x + 0.5) * WIDTH / COLS + WIDTH/2, (y + 0.5) * HEIGHT / ROWS + HEIGHT/2), 5, 0)
 
-        for i in range(4): # because here bounding box contains 4 vertices
+        bbox = bbox_all[obs]
+
+        # because here bounding box contains 4 vertices
+        for i in range(4):
             x1, y1 = vectorAdd(scalarMultiply(bbox[i], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
-            for j in range(i+1, 4): # with this we basically get all combinations of the 4 vertices, ie, 6 combinations
+            
+            # with this we basically get all combinations of the 4 vertices, ie, 6 combinations
+            for j in range(i+1, 4):
                 x2, y2 = vectorAdd(scalarMultiply(bbox[j], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
 
                 pygame.draw.line(window, TURQUOISE, (x1, y1), (x2, y2), 1)
+
+    # show robot bbox
+    bbox = bbox_robot
+
+    # because here bounding box contains 4 vertices
+    for i in range(4):
+        x1, y1 = vectorAdd(scalarMultiply(bbox[i], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
+        
+        # with this we basically get all combinations of the 4 vertices, ie, 6 combinations
+        for j in range(i+1, 4):
+            x2, y2 = vectorAdd(scalarMultiply(bbox[j], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
+
+            pygame.draw.line(window, GREEN, (x1, y1), (x2, y2), 1)
 
 def getEdgeLineFunction(v1, v2):
     # edge line function: f(x,y) = y - mx - c
@@ -223,8 +384,11 @@ def mutateNodesUsingBoundingBox(bbox):
         i = int(x // cWidth)
         # coordinates are flipped fsr... idk
 
-        if i < len(Nodes) and j < len(Nodes[0]):
-            Nodes[i][j].setState(1)
+        # if i < len(Nodes) and j < len(Nodes[i]):
+        #     Nodes[i][j].setState(1)
+        if 0 <= i < len(Nodes):
+            if 0 <= j < len(Nodes[i]):
+                Nodes[i][j].setState(1)
 
     # 2. close the nodes that are inside or intersecting with the bounding box
     A = vectorAdd(scalarMultiply(bbox[0], BOUNDING_BOX_SCALING_FACTOR), (WIDTH/2, HEIGHT/2))
@@ -327,8 +491,12 @@ def mutateNodesUsingBoundingBox(bbox):
             Nodes[COLS - j - 1][ROWS - i - 1].setState(1)
 
 def draw():
-    for bbox in bbox_all:
-        mutateNodesUsingBoundingBox(bbox)
+    global obstacles_visible
+    for i in obstacles_static:
+        mutateNodesUsingBoundingBox(bbox_all[i])
+
+    # for i in obstacles_visible:
+    #     mutateNodesUsingBoundingBox(getCorrectBBox(i))
 
     # draw cells/nodes
     drawNodes()
@@ -408,6 +576,10 @@ def g(a:Node, b:Node) -> float:
     return dist
 
 def a_star(start, end):
+    print("Searching path...")
+    print(start.state, end.state)
+    if start.state == 1 or end.state == 1:
+        return []
     PATH = []
     count = 0
     open_set = PriorityQueue()
@@ -460,16 +632,16 @@ def a_star(start, end):
         # uncomment to render each step of the algorithm
         # draw()
     
-    return -1
+    return []
 
 def setup():
     # temp
     global START_NODE, END_NODE
     global ROBOT_BOUNDING_BOX_SIZE
-    global robotPos, targetPos
+    global robot_pos, target_pos
 
-    startX, startY, startZ = robotPos
-    endX, endY, endZ = targetPos
+    startX, startY, startZ = robot_pos
+    endX, endY, endZ = target_pos
 
     cWidth = WIDTH / COLS / BOUNDING_BOX_SCALING_FACTOR
     cHeight = HEIGHT / ROWS / BOUNDING_BOX_SCALING_FACTOR
@@ -481,6 +653,9 @@ def setup():
     startY = int(startY // cHeight)
     endX = int(endX // cWidth)
     endY = int(endY // cHeight)
+
+    # endX = startX + 2
+    # endY = startY
     
     START_NODE = Nodes[startX][startY]
     END_NODE = Nodes[endX][endY]
@@ -496,13 +671,15 @@ def setup():
                 Nodes[i][j].connect(Nodes[i+1][j])
 
     # getting size of the robot
-    distances = list(map(lambda x: distance(x, bbox_robot[0][0]), bbox_robot[0]))
+    distances = list(map(lambda x: distance(x, bbox_robot[0]), bbox_robot))
     diagonal = max(distances)
 
     ROBOT_BOUNDING_BOX_SIZE = diagonal/2 * BOUNDING_BOX_SCALING_FACTOR
 
-def printPath(path):
-    map(mutateNodesUsingBoundingBox, bbox_all)
+def displayPath(path):
+    for bbox in bbox_all:
+        mutateNodesUsingBoundingBox(bbox)
+
     drawNodes()
     drawBoundingBoxes()
     drawGrid()
@@ -517,6 +694,7 @@ def printPath(path):
 
 def loop():
     global START_SEARCH
+    global START_NODE, END_NODE
 
     # Clear the window
     window.fill(WHITE)
@@ -530,12 +708,50 @@ def loop():
         #     for j in range(len(path[i])):
         #         Nodes[i][j].setState(path[i][j][1])
         # draw()
+
+        _endX, _endY = END_NODE.pos[::-1]
+        count = 0
+        direction = random.choice([1, 2, 3, 4])
+        def isPosValid(x, y):
+            return (0 <= x < len(Nodes) and 0 <= y < len(Nodes[0]))
+        while count < 1000:
+            if direction == 1 and isPosValid(_endX, _endY - 1):
+                if Nodes[_endX][_endY - 1].state == 1:
+                    direction = random.choice([2, 4])
+                    continue
+
+                _endY -= 1
+            elif direction == 2 and isPosValid(_endX + 1, _endY):
+                if Nodes[_endX + 1][_endY].state == 1:
+                    direction = random.choice([1, 3])
+                    continue
+
+                _endX += 1
+            elif direction == 3 and isPosValid(_endX, _endY + 1):
+                if Nodes[_endX][_endY + 1].state == 1:
+                    direction = random.choice([2, 4])
+                    continue
+
+                _endY += 1
+            elif direction == 4 and isPosValid(_endX - 1, _endY):
+                if Nodes[_endX - 1][_endY].state == 1:
+                    direction = random.choice([1, 3])
+                    continue
+
+                _endX -= 1
+
+            Nodes[_endX][_endY].setState(4)
+            count += 1
+
+        END_NODE.setState(0)
+        END_NODE = Nodes[_endX][_endY]
+        END_NODE.setState(3)
+
         pathFound = a_star(START_NODE, END_NODE)
         if pathFound:
             print(pathFound)
-            printPath(pathFound)
-            import time
-            time.sleep(10)
+            displayPath(pathFound)
+            
         START_SEARCH = 0
 
     draw()
